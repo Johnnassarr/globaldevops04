@@ -123,7 +123,7 @@ stages:
           ./mvnw clean package -DskipTests=false
           
           echo ""
-          echo "✓ Build completed!"
+          echo "Build completed!"
           echo "Artifact location: target/"
           
           # Verificar se o build gerou o JAR
@@ -178,7 +178,7 @@ stages:
           
           if [ -z "$ACR_PASSWORD" ]; then
             echo ""
-            echo "❌ ERRO: Variável 'acrPassword' não está configurada!"
+            echo "ERRO: Variável 'acrPassword' não está configurada!"
             echo "Configure como variável SECRET no Azure DevOps"
             echo ""
             exit 1
@@ -187,9 +187,9 @@ stages:
           echo "$ACR_PASSWORD" | docker login $(acrLoginServer) --username $(acrName) --password-stdin
           
           if [ $? -eq 0 ]; then
-            echo "✅ Login realizado com sucesso no ACR!"
+            echo "Login realizado com sucesso no ACR!"
           else
-            echo "❌ ERRO: Falha ao fazer login no ACR!"
+            echo "ERRO: Falha ao fazer login no ACR!"
             exit 1
           fi
       env:
@@ -204,7 +204,7 @@ stages:
           echo "Tagging images for ACR..."
           docker tag $(imageName):$(imageTag) $(acrLoginServer)/$(imageName):$(imageTag)
           docker tag $(imageName):latest $(acrLoginServer)/$(imageName):latest
-          echo "✓ Images tagged"
+          echo "Images tagged"
     
     # Push to ACR
     - task: Bash@3
@@ -215,7 +215,7 @@ stages:
           echo "Pushing images to ACR..."
           docker push $(acrLoginServer)/$(imageName):$(imageTag)
           docker push $(acrLoginServer)/$(imageName):latest
-          echo "✓ Images pushed successfully!"
+          echo "Images pushed successfully!"
           echo ""
           echo "=========================================="
           echo "BUILD SUMMARY"
@@ -285,7 +285,7 @@ stages:
                 
                 # Verificar Resource Group
                 if az group show --name $(azureRG) &> /dev/null; then
-                  echo "✓ Resource Group já existe: $(azureRG)"
+                  echo "Resource Group já existe: $(azureRG)"
                 else
                   echo "Criando Resource Group..."
                   az group create --name $(azureRG) --location $(location)
@@ -293,7 +293,7 @@ stages:
                 
                 # Verificar ACR
                 if az acr show --name $(acrName) --resource-group $(azureRG) &> /dev/null; then
-                  echo "✓ ACR já existe: $(acrName)"
+                  echo "ACR já existe: $(acrName)"
                 else
                   echo "Criando ACR..."
                   az acr create \
@@ -303,7 +303,7 @@ stages:
                     --admin-enabled true
                 fi
                 
-                echo "✓ Infraestrutura verificada/criada com sucesso!"
+                echo "Infraestrutura verificada/criada com sucesso!"
           
           # Deploy para ACI
           - task: AzureCLI@2
@@ -341,7 +341,7 @@ stages:
                   --restart-policy Always
                 
                 if [ $? -eq 0 ]; then
-                  echo "✅ Deploy realizado com sucesso!"
+                  echo "Deploy realizado com sucesso!"
                   
                   # Obter FQDN
                   FQDN=$(az container show --resource-group $(azureRG) --name $ACI_GROUP_NAME --query ipAddress.fqdn -o tsv)
@@ -355,7 +355,7 @@ stages:
                   echo "Build ID: $(Build.BuildId)"
                   echo "=========================================="
                 else
-                  echo "❌ ERRO: Falha no deploy!"
+                  echo "ERRO: Falha no deploy!"
                   exit 1
                 fi
 
