@@ -57,6 +57,9 @@ stages:
   jobs:
   - job: BuildJob
     displayName: 'Build Application'
+    # NOTA: Se receber erro de paralelismo, você tem 2 opções:
+    # 1. Solicitar paralelismo gratuito: https://aka.ms/azpipelines-parallelism-request
+    # 2. Usar self-hosted agent (altere para: name: 'self-hosted-pool')
     pool:
       vmImage: 'ubuntu-latest'
     
