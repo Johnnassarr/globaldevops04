@@ -1,0 +1,361 @@
+# =============================================================================
+# Azure DevOps Pipeline - EcoTask API
+# =============================================================================
+# Pipeline de CI/CD - Build, Test, Push para ACR e Deploy
+# RM: 556221
+# =============================================================================
+
+trigger:
+  branches:
+    include:
+    - main
+    - master
+  paths:
+    exclude:
+    - README.md
+    - '*.md'
+    - '*.sh'
+
+pr:
+  branches:
+    include:
+    - main
+    - master
+
+variables:
+  # Build variables
+  mavenVersion: '3.9.x'
+  jdkVersion: '21'
+  
+  # Azure Service Connection (IMPORTANTE: Configure este valor no Azure DevOps!)
+  azureServiceConnection: '2b4ef3b2-0971-4f1b-89e4-d7bdb1ac7b55'
+  
+  # Azure variables
+  azureRG: 'rg-ecotask-rm556221'
+  acrName: 'acrecotaskrm556221'
+  acrLoginServer: 'acrecotaskrm556221.azurecr.io'
+  location: 'eastus'
+  
+  # Image variables
+  imageName: 'ecotask-api'
+  imageTag: '$(Build.BuildId)'
+  
+  # Database variables (Configure no Azure DevOps como SECRET)
+  # dbHost: '<configured-as-variable>'
+  # dbPort: '5432'
+  # dbName: 'ecotask'
+  # dbUser: 'postgres'
+  # dbPassword: '<configured-as-secret>'
+
+stages:
+# =============================================================================
+# STAGE 1: BUILD & TEST (CI)
+# =============================================================================
+- stage: Build
+  displayName: 'Build, Test and Push to ACR'
+  jobs:
+  - job: BuildJob
+    displayName: 'Build Application'
+    pool:
+      name: self-hosted-pool
+    
+    steps:
+    # Checkout code
+    - checkout: self
+      displayName: '📥 Checkout Repository'
+      clean: true
+    
+    # Instalar Java 21 se não estiver instalado
+    - task: Bash@3
+      displayName: '☕ Instalar/Verificar Java 21'
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "Verificando Java..."
+          
+          if command -v java &> /dev/null; then
+            JAVA_VERSION=$(java -version 2>&1 | head -n 1 | cut -d'"' -f2 | sed '/^1\./s///' | cut -d'.' -f1)
+            echo "Java encontrado: versão $JAVA_VERSION"
+            
+            if [ "$JAVA_VERSION" -lt "21" ]; then
+              echo "Java 21 é necessário. Instalando..."
+              sudo apt update
+              sudo apt install -y openjdk-21-jdk
+            fi
+          else
+            echo "Java não encontrado. Instalando OpenJDK 21..."
+            sudo apt update
+            sudo apt install -y openjdk-21-jdk
+          fi
+          
+          echo "Java instalado:"
+          java -version
+          
+          # Configurar JAVA_HOME
+          export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+          echo "JAVA_HOME set to: $JAVA_HOME"
+          echo "##vso[task.setvariable variable=JAVA_HOME]$JAVA_HOME"
+    
+    # Build with Maven Wrapper
+    - task: Bash@3
+      displayName: '🔨 Maven: Clean and Build'
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "Building with Maven Wrapper..."
+          echo "Working directory: $(pwd)"
+          
+          # Configurar HOME e JAVA_HOME
+          if [ -z "$HOME" ]; then
+            export HOME=/root
+          fi
+          
+          if [ -z "$JAVA_HOME" ]; then
+            export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+          fi
+          
+          echo "JAVA_HOME: $JAVA_HOME"
+          
+          # Dar permissão ao Maven Wrapper
+          chmod +x mvnw
+          
+          # Build com Maven Wrapper (executa testes)
+          ./mvnw clean package -DskipTests=false
+          
+          echo ""
+          echo "✓ Build completed!"
+          echo "Artifact location: target/"
+          
+          # Verificar se o build gerou o JAR
+          if [ -d "target" ]; then
+            echo "Directory target/ exists"
+            ls -lah target/*.jar 2>/dev/null || echo "No JAR files found"
+          else
+            echo "ERROR: Directory target/ was not created!"
+            exit 1
+          fi
+    
+    # Publish test results
+    - task: PublishTestResults@2
+      displayName: '📊 Publish Test Results (JUnit)'
+      condition: always()
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: '**/surefire-reports/TEST-*.xml'
+        mergeTestResults: true
+        failTaskOnFailedTests: false
+        testRunTitle: 'Unit Tests - EcoTask'
+    
+    # Publish build artifact
+    - task: PublishBuildArtifacts@1
+      displayName: '📦 Publish Build Artifact'
+      condition: succeeded()
+      continueOnError: true
+      inputs:
+        PathtoPublish: '$(System.DefaultWorkingDirectory)/target'
+        ArtifactName: 'target'
+        publishLocation: 'Container'
+    
+    # Docker: Build Image
+    - task: Docker@2
+      displayName: '🐳 Docker: Build Image'
+      inputs:
+        command: 'build'
+        repository: '$(imageName)'
+        dockerfile: '$(Build.SourcesDirectory)/dockerfiles/Dockerfile'
+        tags: |
+          $(imageTag)
+          latest
+    
+    # ACR: Login
+    - task: Bash@3
+      displayName: '🔐 ACR: Docker Login'
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "Fazendo login no ACR: $(acrLoginServer)"
+          echo "Username: $(acrName)"
+          
+          if [ -z "$ACR_PASSWORD" ]; then
+            echo ""
+            echo "❌ ERRO: Variável 'acrPassword' não está configurada!"
+            echo "Configure como variável SECRET no Azure DevOps"
+            echo ""
+            exit 1
+          fi
+          
+          echo "$ACR_PASSWORD" | docker login $(acrLoginServer) --username $(acrName) --password-stdin
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ Login realizado com sucesso no ACR!"
+          else
+            echo "❌ ERRO: Falha ao fazer login no ACR!"
+            exit 1
+          fi
+      env:
+        ACR_PASSWORD: $(acrPassword)
+    
+    # Docker: Tag for ACR
+    - task: Bash@3
+      displayName: '🏷️ Docker: Tag Images for ACR'
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "Tagging images for ACR..."
+          docker tag $(imageName):$(imageTag) $(acrLoginServer)/$(imageName):$(imageTag)
+          docker tag $(imageName):latest $(acrLoginServer)/$(imageName):latest
+          echo "✓ Images tagged"
+    
+    # Push to ACR
+    - task: Bash@3
+      displayName: '⬆️ ACR: Push Images'
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "Pushing images to ACR..."
+          docker push $(acrLoginServer)/$(imageName):$(imageTag)
+          docker push $(acrLoginServer)/$(imageName):latest
+          echo "✓ Images pushed successfully!"
+          echo ""
+          echo "=========================================="
+          echo "BUILD SUMMARY"
+          echo "=========================================="
+          echo "Image: $(acrLoginServer)/$(imageName):$(imageTag)"
+          echo "Latest: $(acrLoginServer)/$(imageName):latest"
+          echo "Build ID: $(Build.BuildId)"
+          echo "=========================================="
+
+# =============================================================================
+# STAGE 2: DEPLOY (CD)
+# =============================================================================
+- stage: Deploy
+  displayName: 'Deploy to Azure Container Instances'
+  dependsOn: Build
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - deployment: DeployJob
+    displayName: 'Deploy to ACI'
+    pool:
+      name: self-hosted-pool
+    environment: 'production'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          # Checkout code para acessar scripts
+          - checkout: self
+            displayName: '📥 Checkout Repository'
+          
+          # Instalar Azure CLI se necessário
+          - task: Bash@3
+            displayName: '☁️ Verificar/Instalar Azure CLI'
+            inputs:
+              targetType: 'inline'
+              script: |
+                if command -v az &> /dev/null; then
+                  echo "Azure CLI já está instalado:"
+                  az --version
+                else
+                  echo "Instalando Azure CLI..."
+                  curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+                fi
+          
+          # Login no Azure
+          - task: AzureCLI@2
+            displayName: '🔐 Azure: Login'
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo "Logado no Azure"
+                az account show
+          
+          # Executar script de infraestrutura (se necessário criar recursos)
+          # NOTA: O provisionamento pode ser feito manualmente ou via script
+          # Este passo é opcional se os recursos já existirem
+          - task: AzureCLI@2
+            displayName: '🏗️ Verificar/Provisionar Infraestrutura'
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo "Verificando recursos Azure..."
+                
+                # Verificar Resource Group
+                if az group show --name $(azureRG) &> /dev/null; then
+                  echo "✓ Resource Group já existe: $(azureRG)"
+                else
+                  echo "Criando Resource Group..."
+                  az group create --name $(azureRG) --location $(location)
+                fi
+                
+                # Verificar ACR
+                if az acr show --name $(acrName) --resource-group $(azureRG) &> /dev/null; then
+                  echo "✓ ACR já existe: $(acrName)"
+                else
+                  echo "Criando ACR..."
+                  az acr create \
+                    --resource-group $(azureRG) \
+                    --name $(acrName) \
+                    --sku Basic \
+                    --admin-enabled true
+                fi
+                
+                echo "✓ Infraestrutura verificada/criada com sucesso!"
+          
+          # Deploy para ACI
+          - task: AzureCLI@2
+            displayName: '🚀 Deploy to ACI'
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo "Deploying to Azure Container Instances..."
+                
+                # Nome do container group
+                ACI_GROUP_NAME="ecotask-api-$(Build.BuildId)"
+                
+                # Criar ou atualizar container instance
+                az container create \
+                  --resource-group $(azureRG) \
+                  --name $ACI_GROUP_NAME \
+                  --image $(acrLoginServer)/$(imageName):$(imageTag) \
+                  --registry-login-server $(acrLoginServer) \
+                  --registry-username $(acrName) \
+                  --registry-password "$(acrPassword)" \
+                  --dns-name-label ecotask-rm556221 \
+                  --ports 8080 \
+                  --environment-variables \
+                    SPRING_DATASOURCE_URL="jdbc:postgresql://$(dbHost):$(dbPort)/$(dbName)" \
+                    SPRING_DATASOURCE_USERNAME="$(dbUser)" \
+                    SPRING_DATASOURCE_PASSWORD="$(dbPassword)" \
+                    SPRING_RABBITMQ_HOST="$(rabbitmqHost)" \
+                    SPRING_RABBITMQ_PORT="5672" \
+                    SPRING_RABBITMQ_USERNAME="$(rabbitmqUser)" \
+                    SPRING_RABBITMQ_PASSWORD="$(rabbitmqPassword)" \
+                  --cpu 1 \
+                  --memory 1.5 \
+                  --restart-policy Always
+                
+                if [ $? -eq 0 ]; then
+                  echo "✅ Deploy realizado com sucesso!"
+                  
+                  # Obter FQDN
+                  FQDN=$(az container show --resource-group $(azureRG) --name $ACI_GROUP_NAME --query ipAddress.fqdn -o tsv)
+                  echo ""
+                  echo "=========================================="
+                  echo "DEPLOY SUMMARY"
+                  echo "=========================================="
+                  echo "Container Group: $ACI_GROUP_NAME"
+                  echo "FQDN: $FQDN"
+                  echo "URL: http://$FQDN:8080"
+                  echo "Build ID: $(Build.BuildId)"
+                  echo "=========================================="
+                else
+                  echo "❌ ERRO: Falha no deploy!"
+                  exit 1
+                fi
+

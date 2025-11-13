@@ -1,12 +1,103 @@
+# =============================================================================
+# Docker Compose - EcoTask API
+# =============================================================================
+# Este arquivo permite executar a aplicação completa localmente
+# para testes antes do deploy no Azure
+# RM: 556221
+# =============================================================================
+
 version: '3.8'
 
 services:
+  # ---------------------------------------------------------------------------
+  # BANCO DE DADOS POSTGRESQL
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:15-alpine
+    container_name: ecotask-postgres-local
+    environment:
+      POSTGRES_DB: ecotask
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/script-bd.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - ecotask-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # RABBITMQ
+  # ---------------------------------------------------------------------------
   rabbitmq:
     image: rabbitmq:3-management
-    container_name: rabbitmq
+    container_name: ecotask-rabbitmq-local
     ports:
       - "5672:5672"    # Porta para comunicação com a aplicação
       - "15672:15672"  # Painel de administração
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - ecotask-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # APLICAÇÃO JAVA SPRING BOOT
+  # ---------------------------------------------------------------------------
+  ecotask-api:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile
+    container_name: ecotask-api-local
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ecotask
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 1234
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+      JAVA_OPTS: -Xms512m -Xmx1024m
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ecotask-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+# =============================================================================
+# VOLUMES
+# =============================================================================
+volumes:
+  postgres-data:
+    driver: local
+
+# =============================================================================
+# NETWORKS
+# =============================================================================
+networks:
+  ecotask-network:
+    driver: bridge
