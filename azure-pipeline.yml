@@ -169,6 +169,7 @@ stages:
         command: 'build'
         repository: '$(imageName)'
         dockerfile: 'dockerfiles/Dockerfile'
+        buildContext: '$(Build.SourcesDirectory)'
         tags: |
           $(imageTag)
           latest
