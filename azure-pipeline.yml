@@ -57,17 +57,17 @@ stages:
   - job: BuildJob
     displayName: 'Build Application'
     pool:
-      name: self-hosted-pool
+      vmImage: 'ubuntu-latest'
     
     steps:
     # Checkout code
     - checkout: self
-      displayName: '📥 Checkout Repository'
+      displayName: 'Checkout Repository'
       clean: true
     
     # Instalar Java 21 se não estiver instalado
     - task: Bash@3
-      displayName: '☕ Instalar/Verificar Java 21'
+      displayName: 'Instalar/Verificar Java 21'
       inputs:
         targetType: 'inline'
         script: |
@@ -98,7 +98,7 @@ stages:
     
     # Build with Maven Wrapper
     - task: Bash@3
-      displayName: '🔨 Maven: Clean and Build'
+      displayName: 'Maven: Clean and Build'
       inputs:
         targetType: 'inline'
         script: |
@@ -137,7 +137,7 @@ stages:
     
     # Publish test results
     - task: PublishTestResults@2
-      displayName: '📊 Publish Test Results (JUnit)'
+      displayName: 'Publish Test Results (JUnit)'
       condition: always()
       inputs:
         testResultsFormat: 'JUnit'
@@ -148,7 +148,7 @@ stages:
     
     # Publish build artifact
     - task: PublishBuildArtifacts@1
-      displayName: '📦 Publish Build Artifact'
+      displayName: 'Publish Build Artifact'
       condition: succeeded()
       continueOnError: true
       inputs:
@@ -158,18 +158,18 @@ stages:
     
     # Docker: Build Image
     - task: Docker@2
-      displayName: '🐳 Docker: Build Image'
+      displayName: 'Docker: Build Image'
       inputs:
         command: 'build'
         repository: '$(imageName)'
-        dockerfile: '$(Build.SourcesDirectory)/dockerfiles/Dockerfile'
+        dockerfile: 'dockerfiles/Dockerfile'
         tags: |
           $(imageTag)
           latest
     
     # ACR: Login
     - task: Bash@3
-      displayName: '🔐 ACR: Docker Login'
+      displayName: 'ACR: Docker Login'
       inputs:
         targetType: 'inline'
         script: |
@@ -197,7 +197,7 @@ stages:
     
     # Docker: Tag for ACR
     - task: Bash@3
-      displayName: '🏷️ Docker: Tag Images for ACR'
+      displayName: 'Docker: Tag Images for ACR'
       inputs:
         targetType: 'inline'
         script: |
@@ -208,7 +208,7 @@ stages:
     
     # Push to ACR
     - task: Bash@3
-      displayName: '⬆️ ACR: Push Images'
+      displayName: 'ACR: Push Images'
       inputs:
         targetType: 'inline'
         script: |
@@ -231,12 +231,12 @@ stages:
 - stage: Deploy
   displayName: 'Deploy to Azure Container Instances'
   dependsOn: Build
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), eq(variables['Build.SourceBranch'], 'refs/heads/master')))
   jobs:
   - deployment: DeployJob
     displayName: 'Deploy to ACI'
     pool:
-      name: self-hosted-pool
+      vmImage: 'ubuntu-latest'
     environment: 'production'
     strategy:
       runOnce:
@@ -244,11 +244,11 @@ stages:
           steps:
           # Checkout code para acessar scripts
           - checkout: self
-            displayName: '📥 Checkout Repository'
+            displayName: 'Checkout Repository'
           
           # Instalar Azure CLI se necessário
           - task: Bash@3
-            displayName: '☁️ Verificar/Instalar Azure CLI'
+            displayName: 'Verificar/Instalar Azure CLI'
             inputs:
               targetType: 'inline'
               script: |
@@ -262,7 +262,7 @@ stages:
           
           # Login no Azure
           - task: AzureCLI@2
-            displayName: '🔐 Azure: Login'
+            displayName: 'Azure: Login'
             inputs:
               azureSubscription: '$(azureServiceConnection)'
               scriptType: 'bash'
@@ -275,7 +275,7 @@ stages:
           # NOTA: O provisionamento pode ser feito manualmente ou via script
           # Este passo é opcional se os recursos já existirem
           - task: AzureCLI@2
-            displayName: '🏗️ Verificar/Provisionar Infraestrutura'
+            displayName: 'Verificar/Provisionar Infraestrutura'
             inputs:
               azureSubscription: '$(azureServiceConnection)'
               scriptType: 'bash'
@@ -307,7 +307,7 @@ stages:
           
           # Deploy para ACI
           - task: AzureCLI@2
-            displayName: '🚀 Deploy to ACI'
+            displayName: 'Deploy to ACI'
             inputs:
               azureSubscription: '$(azureServiceConnection)'
               scriptType: 'bash'
