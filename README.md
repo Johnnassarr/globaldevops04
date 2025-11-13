@@ -65,7 +65,7 @@ git clone <repository-url>
 cd ecotask-java-main
 
 # Executar com Docker Compose
-docker-compose up -d
+docker-compose -f docker-compose.local.yml up -d
 
 # A API estará disponível em http://localhost:8080
 ```
