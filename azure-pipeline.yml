@@ -125,7 +125,12 @@ stages:
           # Dar permissão ao Maven Wrapper
           chmod +x mvnw
           
-          # Build com Maven Wrapper (executa testes)
+          # Configurar variáveis de ambiente para conectar ao PostgreSQL do container
+          export SPRING_DATASOURCE_URL="jdbc:postgresql://localhost:5432/ecotask_test"
+          export SPRING_DATASOURCE_USERNAME="postgres"
+          export SPRING_DATASOURCE_PASSWORD="postgres"
+          
+          # Build com Maven Wrapper (executa testes com PostgreSQL)
           ./mvnw clean package -DskipTests=false
           
           echo ""
