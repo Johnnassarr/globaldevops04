@@ -210,29 +210,60 @@ stages:
       env:
         ACR_PASSWORD: $(acrPassword)
     
-    # Docker: Tag for ACR (apenas se login foi bem-sucedido)
+    # Docker: Tag for ACR (sempre executa, mas verifica se pode fazer)
     - task: Bash@3
       displayName: 'Docker: Tag Images for ACR'
-      condition: and(succeeded(), eq(variables['ACRLogin.ACR_LOGIN_SUCCESS'], 'true'))
+      continueOnError: true
       inputs:
         targetType: 'inline'
         script: |
+          echo "Verificando se pode fazer tag para ACR..."
+          
+          if [ -z "$(acrLoginServer)" ] || [ -z "$(acrPassword)" ]; then
+            echo "=========================================="
+            echo "ACR não configurado - Pulando tag"
+            echo "=========================================="
+            echo "Para habilitar:"
+            echo "1. Crie o ACR no Azure (use script-infra-provision.sh)"
+            echo "2. Configure a variável 'acrPassword' no Azure DevOps"
+            echo "=========================================="
+            exit 0
+          fi
+          
           echo "Tagging images for ACR..."
           docker tag $(imageName):$(imageTag) $(acrLoginServer)/$(imageName):$(imageTag)
           docker tag $(imageName):latest $(acrLoginServer)/$(imageName):latest
-          echo "Images tagged"
+          echo "Images tagged successfully!"
     
-    # Push to ACR (apenas se login foi bem-sucedido)
+    # Push to ACR (sempre executa, mas verifica se pode fazer)
     - task: Bash@3
       displayName: 'ACR: Push Images'
-      condition: and(succeeded(), eq(variables['ACRLogin.ACR_LOGIN_SUCCESS'], 'true'))
+      continueOnError: true
       inputs:
         targetType: 'inline'
         script: |
+          echo "Verificando se pode fazer push para ACR..."
+          
+          if [ -z "$(acrLoginServer)" ] || [ -z "$(acrPassword)" ]; then
+            echo "=========================================="
+            echo "ACR não configurado - Pulando push"
+            echo "=========================================="
+            echo "Para habilitar:"
+            echo "1. Crie o ACR no Azure (use script-infra-provision.sh)"
+            echo "2. Configure a variável 'acrPassword' no Azure DevOps"
+            echo "=========================================="
+            exit 0
+          fi
+          
+          # Verificar se está logado
+          if ! docker info | grep -q "$(acrLoginServer)"; then
+            echo "Não está logado no ACR. Tentando login..."
+            echo "$(acrPassword)" | docker login $(acrLoginServer) --username $(acrName) --password-stdin
+          fi
+          
           echo "Pushing images to ACR..."
           docker push $(acrLoginServer)/$(imageName):$(imageTag)
           docker push $(acrLoginServer)/$(imageName):latest
-          echo "Images pushed successfully!"
           echo ""
           echo "=========================================="
           echo "BUILD SUMMARY"
