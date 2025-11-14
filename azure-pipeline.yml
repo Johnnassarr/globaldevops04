@@ -5,7 +5,13 @@
 # RM: 556221
 # =============================================================================
 
-trigger:
+# Trigger: Build roda APENAS após merge via PR (requisito 4)
+# Para desenvolvimento, pode fazer commit direto, mas build só roda após PR
+trigger: none
+
+# PR: Build roda quando PR é criado/atualizado
+# O merge na master/main aciona o build
+pr:
   branches:
     include:
     - main
@@ -15,12 +21,6 @@ trigger:
     - README.md
     - '*.md'
     - '*.sh'
-
-pr:
-  branches:
-    include:
-    - main
-    - master
 
 variables:
   # Build variables
