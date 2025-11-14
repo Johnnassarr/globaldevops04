@@ -308,6 +308,7 @@ stages:
     displayName: 'Deploy to ACI'
     pool:
       name: 'self-hosted-pool'
+    # NOTA: Crie o ambiente 'production' em: Pipelines > Environments > New environment
     environment: 'production'
     strategy:
       runOnce:
@@ -331,13 +332,20 @@ stages:
           
           - task: AzureCLI@2
             displayName: 'Azure: Login'
+            continueOnError: false
             inputs:
               azureSubscription: '$(azureServiceConnection)'
               scriptType: 'bash'
               scriptLocation: 'inlineScript'
               inlineScript: |
+                echo "Verificando Service Connection: $(azureServiceConnection)"
                 echo "Logado no Azure"
                 az account show
+                if [ $? -ne 0 ]; then
+                  echo "ERRO: Falha ao fazer login no Azure"
+                  echo "Verifique se a Service Connection '$(azureServiceConnection)' está configurada corretamente"
+                  exit 1
+                fi
           
           - task: AzureCLI@2
             displayName: 'Verificar/Provisionar Infraestrutura'
