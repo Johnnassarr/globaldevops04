@@ -71,6 +71,33 @@ stages:
       displayName: 'Checkout Repository'
       clean: true
     
+    # Subir PostgreSQL em container para os testes
+    - task: Bash@3
+      displayName: 'PostgreSQL: Iniciar Container para Testes'
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "Iniciando container PostgreSQL para testes..."
+          docker run -d \
+            --name postgres-test \
+            -e POSTGRES_DB=ecotask_test \
+            -e POSTGRES_USER=postgres \
+            -e POSTGRES_PASSWORD=postgres \
+            -p 5432:5432 \
+            postgres:15-alpine
+          
+          echo "Aguardando PostgreSQL estar pronto..."
+          for i in {1..30}; do
+            if docker exec postgres-test pg_isready -U postgres &> /dev/null; then
+              echo "PostgreSQL está pronto!"
+              exit 0
+            fi
+            echo "Tentativa $i/30..."
+            sleep 2
+          done
+          echo "ERRO: PostgreSQL não ficou pronto a tempo"
+          exit 1
+    
     # Instalar Java 21 se não estiver instalado
     - task: Bash@3
       displayName: 'Instalar/Verificar Java 21'
