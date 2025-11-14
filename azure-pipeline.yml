@@ -178,14 +178,19 @@ stages:
     - task: Bash@3
       displayName: 'ACR: Docker Login (Opcional)'
       continueOnError: true
+      name: ACRLogin
       inputs:
         targetType: 'inline'
         script: |
           echo "Verificando se ACR está configurado..."
           
+          # Inicializar variável como false
+          echo "##vso[task.setvariable variable=ACR_LOGIN_SUCCESS;isOutput=true]false"
+          
           if [ -z "$ACR_PASSWORD" ] || [ -z "$(acrLoginServer)" ]; then
             echo "AVISO: ACR não configurado. Pulando login e push para ACR."
             echo "Para habilitar: Configure as variáveis acrPassword e acrLoginServer no Azure DevOps"
+            echo "##vso[task.setvariable variable=ACR_LOGIN_SUCCESS;isOutput=true]false"
             exit 0
           fi
           
@@ -193,15 +198,13 @@ stages:
           echo "Username: $(acrName)"
           
           # Tentar fazer login
-          echo "$ACR_PASSWORD" | docker login $(acrLoginServer) --username $(acrName) --password-stdin 2>&1
-          
-          if [ $? -eq 0 ]; then
+          if echo "$ACR_PASSWORD" | docker login $(acrLoginServer) --username $(acrName) --password-stdin 2>&1; then
             echo "Login realizado com sucesso no ACR!"
-            echo "##vso[task.setvariable variable=ACR_LOGIN_SUCCESS]true"
+            echo "##vso[task.setvariable variable=ACR_LOGIN_SUCCESS;isOutput=true]true"
           else
             echo "AVISO: Falha ao fazer login no ACR. ACR pode não existir ainda."
             echo "Pulando push para ACR. A imagem foi construída localmente."
-            echo "##vso[task.setvariable variable=ACR_LOGIN_SUCCESS]false"
+            echo "##vso[task.setvariable variable=ACR_LOGIN_SUCCESS;isOutput=true]false"
             exit 0
           fi
       env:
@@ -210,7 +213,7 @@ stages:
     # Docker: Tag for ACR (apenas se login foi bem-sucedido)
     - task: Bash@3
       displayName: 'Docker: Tag Images for ACR'
-      condition: and(succeeded(), eq(variables['ACR_LOGIN_SUCCESS'], 'true'))
+      condition: and(succeeded(), eq(variables['ACRLogin.ACR_LOGIN_SUCCESS'], 'true'))
       inputs:
         targetType: 'inline'
         script: |
@@ -222,7 +225,7 @@ stages:
     # Push to ACR (apenas se login foi bem-sucedido)
     - task: Bash@3
       displayName: 'ACR: Push Images'
-      condition: and(succeeded(), eq(variables['ACR_LOGIN_SUCCESS'], 'true'))
+      condition: and(succeeded(), eq(variables['ACRLogin.ACR_LOGIN_SUCCESS'], 'true'))
       inputs:
         targetType: 'inline'
         script: |
@@ -253,10 +256,12 @@ stages:
           echo "Image local: $(imageName):$(imageTag)"
           echo "Image local: $(imageName):latest"
           echo "Build ID: $(Build.BuildId)"
-          if [ "$(ACR_LOGIN_SUCCESS)" == "true" ]; then
-            echo "ACR: $(acrLoginServer)/$(imageName):$(imageTag)"
+          if [ -n "$(acrLoginServer)" ] && [ -n "$(acrPassword)" ]; then
+            echo "ACR configurado: $(acrLoginServer)"
+            echo "Para ver status do push, verifique os steps anteriores"
           else
             echo "ACR: Não configurado ou não disponível"
+            echo "Para configurar: Execute script-infra-provision.sh ou crie manualmente no Azure"
           fi
           echo "=========================================="
 
