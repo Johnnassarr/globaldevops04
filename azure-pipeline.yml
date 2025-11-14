@@ -194,6 +194,18 @@ stages:
         ArtifactName: 'target'
         publishLocation: 'Container'
     
+    # Parar e remover container PostgreSQL após testes
+    - task: Bash@3
+      displayName: 'PostgreSQL: Parar Container'
+      condition: always()
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "Parando container PostgreSQL..."
+          docker stop postgres-test 2>/dev/null || true
+          docker rm postgres-test 2>/dev/null || true
+          echo "Container PostgreSQL removido"
+    
     # Docker: Build Image
     - task: Docker@2
       displayName: 'Docker: Build Image'
