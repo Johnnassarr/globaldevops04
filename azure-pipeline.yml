@@ -297,112 +297,139 @@ stages:
           echo "=========================================="
 
 # =============================================================================
-# STAGE 2: DEPLOY (CD) - COMENTADO TEMPORARIAMENTE
+# STAGE 2: DEPLOY (CD)
 # =============================================================================
-# Descomente este stage após criar a Service Connection do Azure
-# Para criar: Project Settings > Service connections > New service connection > Azure Resource Manager
-#
-# - stage: Deploy
-#   displayName: 'Deploy to Azure Container Instances'
-#   dependsOn: Build
-#   condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), eq(variables['Build.SourceBranch'], 'refs/heads/master')))
-#   jobs:
-#   - deployment: DeployJob
-#     displayName: 'Deploy to ACI'
-#     pool:
-#       vmImage: 'ubuntu-latest'
-#     environment: 'production'
-#     strategy:
-#       runOnce:
-#         deploy:
-#           steps:
-#           - checkout: self
-#             displayName: 'Checkout Repository'
-#           - task: Bash@3
-#             displayName: 'Verificar/Instalar Azure CLI'
-#             inputs:
-#               targetType: 'inline'
-#               script: |
-#                 if command -v az &> /dev/null; then
-#                   echo "Azure CLI já está instalado:"
-#                   az --version
-#                 else
-#                   echo "Instalando Azure CLI..."
-#                   curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-#                 fi
-#           - task: AzureCLI@2
-#             displayName: 'Azure: Login'
-#             inputs:
-#               azureSubscription: '$(azureServiceConnection)'
-#               scriptType: 'bash'
-#               scriptLocation: 'inlineScript'
-#               inlineScript: |
-#                 echo "Logado no Azure"
-#                 az account show
-#           - task: AzureCLI@2
-#             displayName: 'Verificar/Provisionar Infraestrutura'
-#             inputs:
-#               azureSubscription: '$(azureServiceConnection)'
-#               scriptType: 'bash'
-#               scriptLocation: 'inlineScript'
-#               inlineScript: |
-#                 echo "Verificando recursos Azure..."
-#                 if az group show --name $(azureRG) &> /dev/null; then
-#                   echo "Resource Group já existe: $(azureRG)"
-#                 else
-#                   echo "Criando Resource Group..."
-#                   az group create --name $(azureRG) --location $(location)
-#                 fi
-#                 if az acr show --name $(acrName) --resource-group $(azureRG) &> /dev/null; then
-#                   echo "ACR já existe: $(acrName)"
-#                 else
-#                   echo "Criando ACR..."
-#                   az acr create --resource-group $(azureRG) --name $(acrName) --sku Basic --admin-enabled true
-#                 fi
-#                 echo "Infraestrutura verificada/criada com sucesso!"
-#           - task: AzureCLI@2
-#             displayName: 'Deploy to ACI'
-#             inputs:
-#               azureSubscription: '$(azureServiceConnection)'
-#               scriptType: 'bash'
-#               scriptLocation: 'inlineScript'
-#               inlineScript: |
-#                 echo "Deploying to Azure Container Instances..."
-#                 ACI_GROUP_NAME="ecotask-api-$(Build.BuildId)"
-#                 az container create \
-#                   --resource-group $(azureRG) \
-#                   --name $ACI_GROUP_NAME \
-#                   --image $(acrLoginServer)/$(imageName):$(imageTag) \
-#                   --registry-login-server $(acrLoginServer) \
-#                   --registry-username $(acrName) \
-#                   --registry-password "$(acrPassword)" \
-#                   --dns-name-label ecotask-rm556221 \
-#                   --ports 8080 \
-#                   --environment-variables \
-#                     SPRING_DATASOURCE_URL="jdbc:postgresql://$(dbHost):$(dbPort)/$(dbName)" \
-#                     SPRING_DATASOURCE_USERNAME="$(dbUser)" \
-#                     SPRING_DATASOURCE_PASSWORD="$(dbPassword)" \
-#                     SPRING_RABBITMQ_HOST="$(rabbitmqHost)" \
-#                     SPRING_RABBITMQ_PORT="5672" \
-#                     SPRING_RABBITMQ_USERNAME="$(rabbitmqUser)" \
-#                     SPRING_RABBITMQ_PASSWORD="$(rabbitmqPassword)" \
-#                   --cpu 1 \
-#                   --memory 1.5 \
-#                   --restart-policy Always
-#                 if [ $? -eq 0 ]; then
-#                   echo "Deploy realizado com sucesso!"
-#                   FQDN=$(az container show --resource-group $(azureRG) --name $ACI_GROUP_NAME --query ipAddress.fqdn -o tsv)
-#                   echo "Container Group: $ACI_GROUP_NAME"
-#                   echo "FQDN: $FQDN"
-#                   echo "URL: http://$FQDN:8080"
-#                 else
-#                   echo "ERRO: Falha no deploy!"
-#                   exit 1
-#                 fi
-#
-# FIM DO STAGE DEPLOY (COMENTADO)
-# Para habilitar:
-# 1. Crie uma Service Connection: Project Settings > Service connections > New > Azure Resource Manager
-# 2. Atualize a variável azureServiceConnection com o nome da Service Connection criada
-# 3. Descomente o stage acima
+- stage: Deploy
+  displayName: 'Deploy to Azure Container Instances'
+  dependsOn: Build
+  condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), eq(variables['Build.SourceBranch'], 'refs/heads/master')))
+  jobs:
+  - deployment: DeployJob
+    displayName: 'Deploy to ACI'
+    pool:
+      name: 'self-hosted-pool'
+    environment: 'production'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+            displayName: 'Checkout Repository'
+          
+          - task: Bash@3
+            displayName: 'Verificar/Instalar Azure CLI'
+            inputs:
+              targetType: 'inline'
+              script: |
+                if command -v az &> /dev/null; then
+                  echo "Azure CLI já está instalado:"
+                  az --version
+                else
+                  echo "Instalando Azure CLI..."
+                  curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+                fi
+          
+          - task: AzureCLI@2
+            displayName: 'Azure: Login'
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo "Logado no Azure"
+                az account show
+          
+          - task: AzureCLI@2
+            displayName: 'Verificar/Provisionar Infraestrutura'
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo "Verificando recursos Azure..."
+                
+                # Verificar Resource Group
+                if az group show --name $(azureRG) &> /dev/null; then
+                  echo "Resource Group já existe: $(azureRG)"
+                else
+                  echo "Criando Resource Group..."
+                  az group create --name $(azureRG) --location $(location)
+                fi
+                
+                # Verificar ACR
+                if az acr show --name $(acrName) --resource-group $(azureRG) &> /dev/null; then
+                  echo "ACR já existe: $(acrName)"
+                else
+                  echo "Criando ACR..."
+                  az acr create \
+                    --resource-group $(azureRG) \
+                    --name $(acrName) \
+                    --sku Basic \
+                    --admin-enabled true
+                fi
+                
+                echo "Infraestrutura verificada/criada com sucesso!"
+          
+          - task: AzureCLI@2
+            displayName: 'Deploy to ACI'
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo "Deploying to Azure Container Instances..."
+                
+                # Nome do container group
+                ACI_GROUP_NAME="ecotask-api-$(Build.BuildId)"
+                
+                # Verificar se container já existe e deletar se necessário
+                if az container show --resource-group $(azureRG) --name $ACI_GROUP_NAME &> /dev/null; then
+                  echo "Container já existe. Deletando versão anterior..."
+                  az container delete --resource-group $(azureRG) --name $ACI_GROUP_NAME --yes
+                fi
+                
+                # Criar novo container instance
+                az container create \
+                  --resource-group $(azureRG) \
+                  --name $ACI_GROUP_NAME \
+                  --image $(acrLoginServer)/$(imageName):$(imageTag) \
+                  --registry-login-server $(acrLoginServer) \
+                  --registry-username $(acrName) \
+                  --registry-password "$(acrPassword)" \
+                  --dns-name-label ecotask-rm556221-$(Build.BuildId) \
+                  --ports 8080 \
+                  --environment-variables \
+                    SPRING_DATASOURCE_URL="jdbc:postgresql://$(dbHost):$(dbPort)/$(dbName)" \
+                    SPRING_DATASOURCE_USERNAME="$(dbUser)" \
+                    SPRING_DATASOURCE_PASSWORD="$(dbPassword)" \
+                    SPRING_RABBITMQ_HOST="$(rabbitmqHost)" \
+                    SPRING_RABBITMQ_PORT="5672" \
+                    SPRING_RABBITMQ_USERNAME="$(rabbitmqUser)" \
+                    SPRING_RABBITMQ_PASSWORD="$(rabbitmqPassword)" \
+                  --cpu 1 \
+                  --memory 1.5 \
+                  --restart-policy Always
+                
+                if [ $? -eq 0 ]; then
+                  echo ""
+                  echo "=========================================="
+                  echo "DEPLOY REALIZADO COM SUCESSO!"
+                  echo "=========================================="
+                  
+                  # Obter informações do container
+                  FQDN=$(az container show --resource-group $(azureRG) --name $ACI_GROUP_NAME --query ipAddress.fqdn -o tsv)
+                  IP=$(az container show --resource-group $(azureRG) --name $ACI_GROUP_NAME --query ipAddress.ip -o tsv)
+                  
+                  echo "Container Group: $ACI_GROUP_NAME"
+                  echo "FQDN: $FQDN"
+                  echo "IP: $IP"
+                  echo "URL: http://$FQDN:8080"
+                  echo "Build ID: $(Build.BuildId)"
+                  echo ""
+                  echo "A aplicação está rodando e disponível!"
+                  echo "=========================================="
+                else
+                  echo "ERRO: Falha no deploy!"
+                  exit 1
+                fi
 
