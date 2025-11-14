@@ -297,19 +297,27 @@ stages:
           echo "=========================================="
 
 # =============================================================================
-# STAGE 2: DEPLOY (CD)
+# STAGE 2: DEPLOY (CD) - COMENTADO TEMPORARIAMENTE
 # =============================================================================
-- stage: Deploy
-  displayName: 'Deploy to Azure Container Instances'
-  dependsOn: Build
-  condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), eq(variables['Build.SourceBranch'], 'refs/heads/master')))
-  jobs:
-  - deployment: DeployJob
-    displayName: 'Deploy to ACI'
-    pool:
-      name: 'self-hosted-pool'
-    # NOTA: Crie o ambiente 'production' em: Pipelines > Environments > New environment
-    environment: 'production'
+# Para habilitar o Deploy, siga o guia em CONFIGURACAO_AZURE_DEVOPS.md
+# 
+# Passos necessários:
+# 1. Criar Service Connection: Project Settings > Service connections > New > Azure Resource Manager
+#    Nome: Azure-Service-Connection
+# 2. Criar Ambiente: Pipelines > Environments > New environment (nome: 'production')
+# 3. Configurar variáveis no Azure DevOps (veja CONFIGURACAO_AZURE_DEVOPS.md)
+# 4. Descomentar o stage abaixo
+#
+# - stage: Deploy
+#   displayName: 'Deploy to Azure Container Instances'
+#   dependsOn: Build
+#   condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), eq(variables['Build.SourceBranch'], 'refs/heads/master')))
+#   jobs:
+#   - deployment: DeployJob
+#     displayName: 'Deploy to ACI'
+#     pool:
+#       name: 'self-hosted-pool'
+#     environment: 'production'
     strategy:
       runOnce:
         deploy:
