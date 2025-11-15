@@ -14,20 +14,51 @@
 Azure DevOps → Seu Projeto → Project Settings (⚙️) → Service connections → New service connection
 ```
 
-**Passo a passo:**
+**Passo a passo DETALHADO:**
+
 1. No Azure DevOps, clique no **ícone de engrenagem (⚙️)** no canto inferior esquerdo
 2. Clique em **"Project settings"**
 3. No menu lateral esquerdo, vá em **"Service connections"**
 4. Clique no botão **"+ New service connection"** (canto superior direito)
-5. Selecione **"Azure Resource Manager"**
-6. Clique em **"Next"**
-7. Selecione **"Service principal (automatic)"**
-8. Selecione sua **Subscription** do Azure
-9. **Resource group:** Deixe em branco ou selecione um
-10. **Service connection name:** Digite exatamente: `Azure-Service-Connection`
-11. Clique em **"Save"**
+
+**Tela 1: Selecionar Tipo**
+5. Na lista, procure e selecione **"Azure Resource Manager"**
+6. Clique em **"Next"** (botão no canto inferior direito)
+
+**Tela 2: Método de Autenticação**
+7. Selecione **"Service principal (automatic)"** (primeira opção)
+   - ⚠️ NÃO selecione "Workload Identity federation" ou "Managed Identity"
+8. Clique em **"Next"**
+
+**Tela 3: Configuração do Azure**
+9. **Scope level:** Selecione **"Subscription"**
+   - ⚠️ NÃO selecione "Management Group"
+
+10. **Subscription:** 
+    - Selecione sua subscription do Azure na lista
+    - Se não aparecer, clique em "Authorize" e faça login
+    - ⚠️ IMPORTANTE: Anote qual subscription você selecionou
+
+11. **Resource group:** 
+    - Deixe em branco (vazio) OU
+    - Selecione `rg-ecotask-rm556221` se já existir
+    - ⚠️ Deixar em branco é melhor (permite criar recursos em qualquer RG)
+
+12. **Service connection name:** 
+    - Digite EXATAMENTE: `Azure-Service-Connection`
+    - ⚠️ IMPORTANTE: Use este nome exato (com hífen e maiúsculas)
+
+13. **Security:** 
+    - Marque **"Grant access permission to all pipelines"** (recomendado)
+    - OU deixe desmarcado e autorize manualmente depois
+
+14. Clique em **"Save"** (botão no canto inferior direito)
 
 **✅ Pronto! Service Connection criada.**
+
+**Verificação:**
+- Volte em "Service connections" e verifique se aparece `Azure-Service-Connection`
+- Se aparecer, está tudo certo!
 
 ---
 
