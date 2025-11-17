@@ -460,7 +460,7 @@ stages:
                   --cpu 1 \
                   --memory 1.5 \
                   --restart-policy Always
-              if [ $? -eq 0 ]; then
+                if [ $? -eq 0 ]; then
                   echo "DEPLOY REALIZADO COM SUCESSO!"
                   FQDN=$(az container show --resource-group $(azureRG) --name $ACI_GROUP_NAME --query ipAddress.fqdn -o tsv)
                   echo "URL: http://$FQDN:8080"
