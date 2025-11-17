@@ -3,6 +3,8 @@
 # =============================================================================
 # Pipeline de CI/CD - Build, Test, Push para ACR e Deploy
 # RM: 556221
+#
+# Versão 1.5 - Tentativa de forçar refresh do YAML
 # =============================================================================
 
 # Trigger: Build roda APENAS após merge via PR (requisito 4)
