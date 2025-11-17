@@ -427,27 +427,40 @@ stages:
                   echo "Container já existe. Deletando versão anterior..."
                   az container delete --resource-group $(azureRG) --name $ACI_GROUP_NAME --yes
                 fi
+
+                # Captura as variáveis da pipeline para variáveis shell para garantir expansão correta
+                ACR_PASSWORD="$(acrPassword)"
+                DB_HOST="$(dbHost)"
+                DB_PORT="$(dbPort)"
+                DB_NAME="$(dbName)"
+                DB_USER="$(dbUser)"
+                DB_PASSWORD="$(dbPassword)"
+                RABBITMQ_HOST="$(rabbitmqHost)"
+                RABBITMQ_PORT="$(rabbitmqPort)"
+                RABBITMQ_USER="$(rabbitmqUser)"
+                RABBITMQ_PASSWORD="$(rabbitmqPassword)"
+
                 az container create \
                   --resource-group $(azureRG) \
                   --name $ACI_GROUP_NAME \
                   --image $(acrLoginServer)/$(imageName):$(imageTag) \
                   --registry-login-server $(acrLoginServer) \
                   --registry-username $(acrName) \
-                  --registry-password "$(acrPassword)" \
+                  --registry-password "${ACR_PASSWORD}" \
                   --dns-name-label ecotask-rm556221-$(Build.BuildId) \
                   --ports 8080 \
                   --environment-variables \
-                    SPRING_DATASOURCE_URL="jdbc:postgresql://$(dbHost):$(dbPort)/$(dbName)" \
-                    SPRING_DATASOURCE_USERNAME="$(dbUser)" \
-                    SPRING_DATASOURCE_PASSWORD="$(dbPassword)" \
-                    SPRING_RABBITMQ_HOST="$(rabbitmqHost)" \
-                    SPRING_RABBITMQ_PORT="5672" \
-                    SPRING_RABBITMQ_USERNAME="$(rabbitmqUser)" \
-                    SPRING_RABBITMQ_PASSWORD="$(rabbitmqPassword)" \
+                    SPRING_DATASOURCE_URL="jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}" \
+                    SPRING_DATASOURCE_USERNAME="${DB_USER}" \
+                    SPRING_DATASOURCE_PASSWORD="${DB_PASSWORD}" \
+                    SPRING_RABBITMQ_HOST="${RABBITMQ_HOST}" \
+                    SPRING_RABBITMQ_PORT="${RABBITMQ_PORT}" \
+                    SPRING_RABBITMQ_USERNAME="${RABBITMQ_USER}" \
+                    SPRING_RABBITMQ_PASSWORD="${RABBITMQ_PASSWORD}" \
                   --cpu 1 \
                   --memory 1.5 \
                   --restart-policy Always
-                if [ $? -eq 0 ]; then
+              if [ $? -eq 0 ]; then
                   echo "DEPLOY REALIZADO COM SUCESSO!"
                   FQDN=$(az container show --resource-group $(azureRG) --name $ACI_GROUP_NAME --query ipAddress.fqdn -o tsv)
                   echo "URL: http://$FQDN:8080"
