@@ -36,7 +36,7 @@
 - `azureRG`: `rg-ecotask-rm556221`
 - `acrName`: `acrecotaskrm556221`
 - `acrLoginServer`: `acrecotaskrm556221.azurecr.io`
-- `location`: `eastus`
+- `location`: `brazilsouth` # Exemplo: Alterado para 'brazilsouth'
 - `dbHost`: FQDN do PostgreSQL (será obtido após criar o banco)
 - `dbPort`: `5432`
 - `dbName`: `ecotask`

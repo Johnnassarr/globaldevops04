@@ -154,7 +154,8 @@ if az postgres flexible-server show --resource-group "$RESOURCE_GROUP" --name "$
 else
     if [ -z "$DB_PASSWORD" ]; then
         print_warn "Senha do banco não fornecida. Gerando senha aleatória..."
-        DB_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
+        DB_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/ " | cut -c1-25)
+        print_warn "Senha gerada: $DB_PASSWORD" # Adicionado para exibir a senha gerada
     fi
     
     az postgres flexible-server create \
@@ -171,7 +172,7 @@ else
         --output none
     
     print_info "✓ PostgreSQL Server criado com sucesso!"
-    print_warn "DB Password: $DB_PASSWORD (configure como variável secreta no Azure DevOps)"
+    print_warn "DB Password: (configure como variável secreta no Azure DevOps)"
 fi
 
 # Obter informações do banco

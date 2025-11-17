@@ -35,21 +35,16 @@ cd globaldevops04
 # Executar provisionamento
 bash scripts/script-infra-provision.sh \
   --resource-group rg-ecotask-rm556221 \
-  --location eastus \
+  --location brazilsouth \
   --acr-name acrecotaskrm556221 \
   --db-name ecotask-db \
   --db-user postgres \
   --db-password "SuaSenhaSegura123!"
 ```
 
-4. **Anotar valores:**
-```bash
-# ACR Password
-az acr credential show --name acrecotaskrm556221 --query passwords[0].value -o tsv
-
-# DB Host (FQDN)
-az postgres flexible-server show --resource-group rg-ecotask-rm556221 --name ecotask-db-server --query fullyQualifiedDomainName -o tsv
-```
+Após executar, anote:
+- **ACR Password:** Execute `az acr credential show --name acrecotaskrm556221 --query passwords[0].value -o tsv`
+- **DB Host:** Execute `az postgres flexible-server show --resource-group rg-ecotask-rm556221 --name ecotask-db-server --query fullyQualifiedDomainName -o tsv`
 
 **Opção B: Via Portal (Manual)**
 - Veja `GUIA_PASSO_A_PASSO_AZURE_DEVOPS.md` seção 4

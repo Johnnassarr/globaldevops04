@@ -35,7 +35,7 @@ variables:
   azureRG: 'rg-ecotask-rm556221'
   acrName: 'acrecotaskrm556221'
   acrLoginServer: 'acrecotaskrm556221.azurecr.io'
-  location: 'eastus'
+  location: 'brazilsouth' # Exemplo: Alterado para 'brazilsouth'
   
   # Image variables
   imageName: 'ecotask-api'
