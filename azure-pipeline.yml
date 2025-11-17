@@ -3,12 +3,8 @@
 # =============================================================================
 # Pipeline de CI/CD - Build, Test, Push para ACR e Deploy
 # RM: 556221
-#
-# Versão 1.5 - Tentativa de forçar refresh do YAML
 # =============================================================================
 
-# Trigger: Build roda APENAS após merge via PR (requisito 4)
-# Para desenvolvimento, pode fazer commit direto, mas build só roda após PR
 trigger: none
 
 # PR: Build roda quando PR é criado/atualizado
@@ -431,16 +427,8 @@ stages:
                 fi
 
                 # Captura as variáveis da pipeline para variáveis shell para garantir expansão correta
-                ACR_PASSWORD_ENV="$(acrPassword)"
-                DB_HOST_ENV="$(dbHost)"
-                DB_PORT_ENV="$(dbPort)"
-                DB_NAME_ENV="$(dbName)"
-                DB_USER_ENV="$(dbUser)"
-                DB_PASSWORD_ENV="$(dbPassword)"
-                RABBITMQ_HOST_ENV="$(rabbitmqHost)"
-                RABBITMQ_PORT_ENV="$(rabbitmqPort)"
-                RABBITMQ_USER_ENV="$(rabbitmqUser)"
-                RABBITMQ_PASSWORD_ENV="$(rabbitmqPassword)"
+                # As variáveis já são acessíveis diretamente via ambiente do Bash com o sufixo _ENV
+                # Removendo re-atribuições redundantes.
 
                 az container create \
                   --resource-group $(azureRG) \
