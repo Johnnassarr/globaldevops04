@@ -368,6 +368,14 @@ stages:
             inputs:
               targetType: 'inline'
               script: |
+                echo "Verificando conectividade de rede do agente..."
+                if curl -sSf https://www.google.com &> /dev/null; then
+                  echo "Conectividade com a internet OK."
+                else
+                  echo "ERRO: O agente self-hosted não consegue acessar a internet. Por favor, verifique a configuração de rede, firewall e DNS do seu agente."
+                  exit 1
+                fi
+
                 if command -v az &> /dev/null; then
                   echo "Azure CLI já está instalado:"
                   az --version
