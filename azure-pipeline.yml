@@ -429,16 +429,16 @@ stages:
                 fi
 
                 # Captura as variáveis da pipeline para variáveis shell para garantir expansão correta
-                ACR_PASSWORD="$(acrPassword)"
-                DB_HOST="$(dbHost)"
-                DB_PORT="$(dbPort)"
-                DB_NAME="$(dbName)"
-                DB_USER="$(dbUser)"
-                DB_PASSWORD="$(dbPassword)"
-                RABBITMQ_HOST="$(rabbitmqHost)"
-                RABBITMQ_PORT="$(rabbitmqPort)"
-                RABBITMQ_USER="$(rabbitmqUser)"
-                RABBITMQ_PASSWORD="$(rabbitmqPassword)"
+                ACR_PASSWORD_ENV="$(acrPassword)"
+                DB_HOST_ENV="$(dbHost)"
+                DB_PORT_ENV="$(dbPort)"
+                DB_NAME_ENV="$(dbName)"
+                DB_USER_ENV="$(dbUser)"
+                DB_PASSWORD_ENV="$(dbPassword)"
+                RABBITMQ_HOST_ENV="$(rabbitmqHost)"
+                RABBITMQ_PORT_ENV="$(rabbitmqPort)"
+                RABBITMQ_USER_ENV="$(rabbitmqUser)"
+                RABBITMQ_PASSWORD_ENV="$(rabbitmqPassword)"
 
                 az container create \
                   --resource-group $(azureRG) \
@@ -446,17 +446,17 @@ stages:
                   --image $(acrLoginServer)/$(imageName):$(imageTag) \
                   --registry-login-server $(acrLoginServer) \
                   --registry-username $(acrName) \
-                  --registry-password "${ACR_PASSWORD}" \
+                  --registry-password "${ACR_PASSWORD_ENV}" \
                   --dns-name-label ecotask-rm556221-$(Build.BuildId) \
                   --ports 8080 \
                   --environment-variables \
-                    SPRING_DATASOURCE_URL="jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}" \
-                    SPRING_DATASOURCE_USERNAME="${DB_USER}" \
-                    SPRING_DATASOURCE_PASSWORD="${DB_PASSWORD}" \
-                    SPRING_RABBITMQ_HOST="${RABBITMQ_HOST}" \
-                    SPRING_RABBITMQ_PORT="${RABBITMQ_PORT}" \
-                    SPRING_RABBITMQ_USERNAME="${RABBITMQ_USER}" \
-                    SPRING_RABBITMQ_PASSWORD="${RABBITMQ_PASSWORD}" \
+                    SPRING_DATASOURCE_URL="jdbc:postgresql://${DB_HOST_ENV}:${DB_PORT_ENV}/${DB_NAME_ENV}" \
+                    SPRING_DATASOURCE_USERNAME="${DB_USER_ENV}" \
+                    SPRING_DATASOURCE_PASSWORD="${DB_PASSWORD_ENV}" \
+                    SPRING_RABBITMQ_HOST="${RABBITMQ_HOST_ENV}" \
+                    SPRING_RABBITMQ_PORT="${RABBITMQ_PORT_ENV}" \
+                    SPRING_RABBITMQ_USERNAME="${RABBITMQ_USER_ENV}" \
+                    SPRING_RABBITMQ_PASSWORD="${RABBITMQ_PASSWORD_ENV}" \
                   --cpu 1 \
                   --memory 1.5 \
                   --restart-policy Always
@@ -468,4 +468,15 @@ stages:
                   echo "ERRO: Falha no deploy!"
                   exit 1
                 fi
+            env:
+              ACR_PASSWORD_ENV: $(acrPassword)
+              DB_HOST_ENV: $(dbHost)
+              DB_PORT_ENV: $(dbPort)
+              DB_NAME_ENV: $(dbName)
+              DB_USER_ENV: $(dbUser)
+              DB_PASSWORD_ENV: $(dbPassword)
+              RABBITMQ_HOST_ENV: $(rabbitmqHost)
+              RABBITMQ_PORT_ENV: $(rabbitmqPort)
+              RABBITMQ_USER_ENV: $(rabbitmqUser)
+              RABBITMQ_PASSWORD_ENV: $(rabbitmqPassword)
 
