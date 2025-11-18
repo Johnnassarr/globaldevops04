@@ -434,6 +434,7 @@ stages:
                   --resource-group $(azureRG) \
                   --name $ACI_GROUP_NAME \
                   --image $(acrLoginServer)/$(imageName):$(imageTag) \
+                  --os-type Linux \
                   --registry-login-server $(acrLoginServer) \
                   --registry-username $(acrName) \
                   --registry-password "${ACR_PASSWORD_ENV}" \
