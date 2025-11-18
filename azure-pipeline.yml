@@ -444,10 +444,6 @@ stages:
                     SPRING_DATASOURCE_URL="jdbc:postgresql://${DB_HOST_ENV}:${DB_PORT_ENV}/${DB_NAME_ENV}" \
                     SPRING_DATASOURCE_USERNAME="${DB_USER_ENV}" \
                     SPRING_DATASOURCE_PASSWORD="${DB_PASSWORD_ENV}" \
-                    SPRING_RABBITMQ_HOST="${RABBITMQ_HOST_ENV}" \
-                    SPRING_RABBITMQ_PORT="${RABBITMQ_PORT_ENV}" \
-                    SPRING_RABBITMQ_USERNAME="${RABBITMQ_USER_ENV}" \
-                    SPRING_RABBITMQ_PASSWORD="${RABBITMQ_PASSWORD_ENV}" \
                   --cpu 1 \
                   --memory 1.5 \
                   --restart-policy Always
@@ -466,8 +462,4 @@ stages:
               DB_NAME_ENV: $(dbName)
               DB_USER_ENV: $(dbUser)
               DB_PASSWORD_ENV: $(dbPassword)
-              RABBITMQ_HOST_ENV: $(rabbitmqHost)
-              RABBITMQ_PORT_ENV: $(rabbitmqPort)
-              RABBITMQ_USER_ENV: $(rabbitmqUser)
-              RABBITMQ_PASSWORD_ENV: $(rabbitmqPassword)
 
