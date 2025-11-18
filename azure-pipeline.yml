@@ -420,7 +420,7 @@ stages:
               scriptLocation: 'inlineScript'
               inlineScript: |
                 echo "Deploying to Azure Container Instances..."
-                ACI_GROUP_NAME="ecotask-api-$(Build.BuildId)"
+                ACI_GROUP_NAME="ecotask-api-prod"
                 if az container show --resource-group $(azureRG) --name $ACI_GROUP_NAME &> /dev/null; then
                   echo "Container já existe. Deletando versão anterior..."
                   az container delete --resource-group $(azureRG) --name $ACI_GROUP_NAME --yes
